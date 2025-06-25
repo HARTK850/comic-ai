@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ComicGen - יצירת קומיקס אינטראקטיבית</title>
+    <title>יוצר קומיקס אינטראקטיבי עם AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -11,80 +11,116 @@
         
         body {
             font-family: 'Rubik', sans-serif;
-            background-color: #f8fafc;
-        }
-        
-        .panel-placeholder {
-            background-color: #f1f5f9;
-            border: 2px dashed #94a3b8;
-            border-radius: 0.5rem;
+            background-color: #f5f7fa;
         }
         
         .comic-panel {
+            min-height: 200px;
+            border: 2px dashed #ccc;
             transition: all 0.3s ease;
         }
         
         .comic-panel:hover {
-            transform: scale(1.02);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-color: #4f46e5;
         }
         
-        .drag-over {
-            background-color: #e2e8f0;
+        .comic-panel.active {
+            border: 2px solid #4f46e5;
+            background-color: #eef2ff;
+        }
+        
+        .drag-handle {
+            cursor: move;
+        }
+        
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(100%);
+                position: fixed;
+                top: 0;
+                right: 0;
+                height: 100vh;
+                z-index: 50;
+                width: 80%;
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
         }
         
         /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
-            height: 8px;
         }
         
         ::-webkit-scrollbar-track {
-            background: #f1f5f9;
+            background: #f1f1f1;
         }
         
         ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
+            background: #888;
             border-radius: 4px;
         }
         
         ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+            background: #555;
         }
         
-        /* Animation for API check */
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        /* Animation for API key validation */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
         }
         
-        .animate-spin {
-            animation: spin 1s linear infinite;
+        .pulse {
+            animation: pulse 1.5s infinite;
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gray-50">
     <!-- Navigation -->
     <nav class="bg-indigo-600 text-white shadow-lg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
-                    <div class="flex-shrink-0 flex items-center">
-                        <i class="fas fa-book-open text-2xl mr-2"></i>
-                        <span class="text-xl font-bold">ComicGen</span>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-robot text-2xl"></i>
+                    </div>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4 space-x-reverse">
+                            <a href="#" class="px-3 py-2 rounded-md text-sm font-medium bg-indigo-700">בית</a>
+                            <a href="#editor" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">עורך קומיקס</a>
+                            <a href="#api" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">מפתח API</a>
+                            <a href="#projects" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">פרויקטים שלי</a>
+                        </div>
                     </div>
                 </div>
                 <div class="hidden md:block">
-                    <div class="ml-10 flex items-baseline space-x-4">
-                        <a href="#" class="px-3 py-2 rounded-md text-sm font-medium bg-indigo-700">בית</a>
-                        <a href="#editor" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">עורך</a>
-                        <a href="#templates" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">תבניות</a>
-                        <a href="#api" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">API</a>
-                        <a href="#account" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500">חשבון</a>
+                    <div class="ml-4 flex items-center md:ml-6">
+                        <button class="p-1 rounded-full text-indigo-200 hover:text-white focus:outline-none">
+                            <i class="fas fa-bell"></i>
+                        </button>
+                        <div class="ml-3 relative">
+                            <div>
+                                <button id="user-menu" class="max-w-xs flex items-center text-sm rounded-full focus:outline-none">
+                                    <span class="ml-3 mr-2">אורח</span>
+                                    <img class="h-8 w-8 rounded-full" src="https://ui-avatars.com/api/?name=אורח&background=random" alt="">
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="md:hidden">
-                    <button type="button" class="inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-indigo-500 focus:outline-none" id="mobile-menu-button">
+                <div class="-mr-2 flex md:hidden">
+                    <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-indigo-200 hover:text-white hover:bg-indigo-500 focus:outline-none">
                         <i class="fas fa-bars"></i>
                     </button>
                 </div>
@@ -92,1204 +128,870 @@
         </div>
         
         <!-- Mobile menu -->
-        <div class="md:hidden hidden" id="mobile-menu">
-            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                <a href="#" class="block px-3 py-2 rounded-md text-base font-medium bg-indigo-700">בית</a>
-                <a href="#editor" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-500">עורך</a>
-                <a href="#templates" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-500">תבניות</a>
-                <a href="#api" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-500">API</a>
-                <a href="#account" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-500">חשבון</a>
+        <div class="hidden md:hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 space-y-reverse">
+                <a href="#" class="block px-3 py-2 rounded-md text-base font-medium bg-indigo-700 text-white">בית</a>
+                <a href="#editor" class="block px-3 py-2 rounded-md text-base font-medium text-indigo-200 hover:bg-indigo-500 hover:text-white">עורך קומיקס</a>
+                <a href="#api" class="block px-3 py-2 rounded-md text-base font-medium text-indigo-200 hover:bg-indigo-500 hover:text-white">מפתח API</a>
+                <a href="#projects" class="block px-3 py-2 rounded-md text-base font-medium text-indigo-200 hover:bg-indigo-500 hover:text-white">פרויקטים שלי</a>
+            </div>
+            <div class="pt-4 pb-3 border-t border-indigo-700">
+                <div class="flex items-center px-5">
+                    <div class="flex-shrink-0">
+                        <img class="h-10 w-10 rounded-full" src="https://ui-avatars.com/api/?name=אורח&background=random" alt="">
+                    </div>
+                    <div class="mr-3">
+                        <div class="text-base font-medium text-white">אורח</div>
+                    </div>
+                </div>
+                <div class="mt-3 px-2 space-y-1">
+                    <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-indigo-200 hover:text-white hover:bg-indigo-500">החשבון שלי</a>
+                    <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-indigo-200 hover:text-white hover:bg-indigo-500">התנתק</a>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <div class="bg-white">
-        <div class="max-w-7xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:px-8 text-center">
-            <h1 class="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
-                <span class="block">יצירת קומיקס אינטראקטיבית</span>
-                <span class="block text-indigo-600">עם בינה מלאכותית</span>
-            </h1>
-            <p class="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-                הפלטפורמה המתקדמת ליצירת קומיקס דיגיטלי עם עזרה של מודל שפה מתקדם. צור, ערוך ושתף את הסיפורים שלך בקלות.
-            </p>
-            <div class="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
-                <div class="rounded-md shadow">
-                    <a href="#editor" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg md:px-10">
-                        התחל ליצור
-                    </a>
-                </div>
-                <div class="mt-3 rounded-md shadow sm:mt-0 sm:ml-3">
-                    <a href="#demo" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-600 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10">
-                        צפה בדוגמא
-                    </a>
-                </div>
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Hero Section -->
+        <section class="text-center py-12 px-4">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">יוצר קומיקס עם AI</h1>
+            <p class="text-xl text-gray-600 mb-8">הפוך את הסיפורים שלך לקומיקס מרהיב בעזרת בינה מלאכותית</p>
+            <div class="flex justify-center gap-4">
+                <button id="start-editor" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300">
+                    התחל ליצור
+                </button>
+                <button class="bg-white hover:bg-gray-100 text-indigo-600 font-bold py-3 px-6 border border-indigo-600 rounded-lg transition duration-300">
+                    צפה בדוגמאות
+                </button>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- API Key Section -->
-    <div id="api" class="bg-gray-50 py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
-        <div class="max-w-3xl mx-auto">
-            <div class="bg-white shadow rounded-lg p-6">
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">הגדרת מפתח API</h2>
-                <p class="text-gray-600 mb-6">
-                    כדי להשתמש בכל התכונות המתקדמות, אנא הזן את מפתח ה-API שלך מ-Gemini AI. המפתח יישמר בצורה מאובטחת וימושש רק לבקשות שלך.
-                </p>
-                
-                <div class="mb-4">
-                    <label for="api-key" class="block text-sm font-medium text-gray-700 mb-1">מפתח API</label>
-                    <div class="mt-1 relative rounded-md shadow-sm">
-                        <input type="password" id="api-key" name="api-key" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pr-10 sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="הזן את מפתח ה-API שלך">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-key text-gray-400"></i>
-                        </div>
+        <!-- API Key Section -->
+        <section id="api" class="bg-white shadow rounded-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">הגדרת מפתח API של Gemini AI</h2>
+            <div class="mb-4">
+                <label for="api-key" class="block text-sm font-medium text-gray-700 mb-2">מפתח API</label>
+                <div class="mt-1 relative rounded-md shadow-sm">
+                    <input type="password" id="api-key" name="api-key" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pr-10 sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="הכנס את מפתח ה-API שלך">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-key text-gray-400"></i>
                     </div>
                 </div>
-                
-                <div class="flex items-center">
-                    <button id="check-api" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center">
-                        <span id="check-api-text">בדוק API</span>
-                        <span id="check-api-spinner" class="ml-2 hidden animate-spin">
-                            <i class="fas fa-circle-notch"></i>
-                        </span>
+                <p class="mt-2 text-sm text-gray-500">אנחנו מצפינים את המפתח שלך ומשתמשים בו רק כדי לתקשר עם Gemini AI.</p>
+            </div>
+            <div class="flex items-center">
+                <button id="validate-api" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md flex items-center">
+                    <span id="validate-text">בדוק מפתח</span>
+                    <span id="validate-spinner" class="hidden ml-2">
+                        <i class="fas fa-circle-notch fa-spin"></i>
+                    </span>
+                </button>
+                <div id="api-status" class="mr-4 hidden">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Login/Register Section -->
+        <section class="bg-white shadow rounded-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">התחברות / הרשמה</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">התחברות</h3>
+                    <div class="mb-4">
+                        <label for="login-email" class="block text-sm font-medium text-gray-700 mb-2">אימייל</label>
+                        <input type="email" id="login-email" name="login-email" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
+                    </div>
+                    <div class="mb-4">
+                        <label for="login-password" class="block text-sm font-medium text-gray-700 mb-2">סיסמה</label>
+                        <input type="password" id="login-password" name="login-password" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
+                    </div>
+                    <button id="login-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md w-full">
+                        התחבר
                     </button>
-                    
-                    <div id="api-status" class="ml-4 hidden">
-                        <span id="api-status-icon" class="mr-1"></span>
-                        <span id="api-status-text"></span>
-                    </div>
                 </div>
-                
-                <div class="mt-4 text-sm text-gray-500">
-                    <p>אין לך מפתח API? קבל אחד מ-<a href="https://ai.google.dev/" target="_blank" class="text-indigo-600 hover:text-indigo-500">Google AI Studio</a>.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Account Section -->
-    <div id="account" class="bg-white py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
-        <div class="max-w-3xl mx-auto">
-            <div class="bg-gray-50 shadow rounded-lg p-6">
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">הגדרות חשבון</h2>
-                
-                <!-- Login Form -->
-                <div id="login-form">
-                    <p class="text-gray-600 mb-6">התחבר כדי לשמור את הפרויקטים שלך בענן ולגשת אליהם מכל מכשיר.</p>
-                    
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">הרשמה</h3>
                     <div class="mb-4">
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">אימייל</label>
-                        <input type="email" id="email" name="email" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="הזן את האימייל שלך">
+                        <label for="register-email" class="block text-sm font-medium text-gray-700 mb-2">אימייל</label>
+                        <input type="email" id="register-email" name="register-email" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
                     </div>
-                    
                     <div class="mb-4">
-                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">סיסמה</label>
-                        <input type="password" id="password" name="password" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="הזן את הסיסמה שלך">
+                        <label for="register-password" class="block text-sm font-medium text-gray-700 mb-2">סיסמה</label>
+                        <input type="password" id="register-password" name="register-password" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
                     </div>
-                    
-                    <div class="flex items-center justify-between">
-                        <button id="login-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            התחבר
-                        </button>
-                        
-                        <button id="show-register" class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                            אין לך חשבון? הירשם
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Register Form (hidden by default) -->
-                <div id="register-form" class="hidden">
-                    <p class="text-gray-600 mb-6">צור חשבון חדש כדי להתחיל לשמור את הפרויקטים שלך.</p>
-                    
                     <div class="mb-4">
-                        <label for="reg-email" class="block text-sm font-medium text-gray-700 mb-1">אימייל</label>
-                        <input type="email" id="reg-email" name="reg-email" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="הזן את האימייל שלך">
+                        <label for="register-confirm" class="block text-sm font-medium text-gray-700 mb-2">אימות סיסמה</label>
+                        <input type="password" id="register-confirm" name="register-confirm" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
                     </div>
-                    
-                    <div class="mb-4">
-                        <label for="reg-password" class="block text-sm font-medium text-gray-700 mb-1">סיסמה</label>
-                        <input type="password" id="reg-password" name="reg-password" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="צור סיסמה (מינימום 8 תווים)">
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="reg-confirm" class="block text-sm font-medium text-gray-700 mb-1">אימות סיסמה</label>
-                        <input type="password" id="reg-confirm" name="reg-confirm" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="הזן שוב את הסיסמה">
-                    </div>
-                    
-                    <div class="flex items-center justify-between">
-                        <button id="register-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            הירשם
-                        </button>
-                        
-                        <button id="show-login" class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                            כבר יש לך חשבון? התחבר
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Logged In View (hidden by default) -->
-                <div id="account-view" class="hidden">
-                    <div class="flex items-center mb-4">
-                        <div class="bg-indigo-100 text-indigo-800 rounded-full w-12 h-12 flex items-center justify-center">
-                            <i class="fas fa-user text-xl"></i>
-                        </div>
-                        <div class="mr-3">
-                            <h3 class="font-medium text-gray-900" id="user-email"></h3>
-                            <p class="text-sm text-gray-500">משתמש פרימיום</p>
-                        </div>
-                    </div>
-                    
-                    <div class="border-t border-gray-200 pt-4">
-                        <h4 class="font-medium text-gray-900 mb-2">פרויקטים שמורים</h4>
-                        <div id="saved-projects" class="space-y-2">
-                            <!-- Projects will be loaded here -->
-                        </div>
-                    </div>
-                    
-                    <div class="mt-4 pt-4 border-t border-gray-200">
-                        <button id="logout-btn" class="text-red-600 hover:text-red-500 text-sm font-medium">
-                            <i class="fas fa-sign-out-alt mr-1"></i> התנתק
-                        </button>
-                    </div>
+                    <button id="register-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md w-full">
+                        הירשם
+                    </button>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- Comic Editor -->
-    <div id="editor" class="bg-gray-50 py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
-        <div class="max-w-7xl mx-auto">
-            <h2 class="text-3xl font-bold text-gray-900 mb-8 text-center">עורך קומיקס</h2>
+        <!-- Comic Editor Section -->
+        <section id="editor" class="bg-white shadow rounded-lg p-6 mb-8 hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">עורך קומיקס</h2>
+                <button id="toggle-sidebar" class="md:hidden bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md">
+                    <i class="fas fa-cog"></i> הגדרות
+                </button>
+            </div>
             
-            <div class="bg-white shadow rounded-lg overflow-hidden">
-                <!-- Toolbar -->
-                <div class="bg-gray-800 text-white px-4 py-3 flex flex-wrap items-center justify-between">
-                    <div class="flex items-center space-x-4">
-                        <button id="new-comic" class="hover:bg-gray-700 p-2 rounded" title="קומיקס חדש">
-                            <i class="fas fa-file"></i>
-                        </button>
-                        <button id="save-comic" class="hover:bg-gray-700 p-2 rounded" title="שמור">
-                            <i class="fas fa-save"></i>
-                        </button>
-                        <button id="download-comic" class="hover:bg-gray-700 p-2 rounded" title="הורד כתמונה">
-                            <i class="fas fa-download"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="flex items-center space-x-4">
-                        <div class="relative">
-                            <select id="art-style" class="bg-gray-700 text-white rounded border-none pr-8 pl-3 py-1 appearance-none">
-                                <option value="anime">אנימה</option>
-                                <option value="realistic">ריאליסטי</option>
-                                <option value="cartoon">קריקטורה</option>
-                                <option value="manga">מאנגה</option>
-                                <option value="pixel">פיקסל ארט</option>
-                            </select>
-                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center px-2 text-gray-300">
-                                <i class="fas fa-paint-brush"></i>
-                            </div>
-                        </div>
-                        
-                        <button id="ai-generate" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1 rounded flex items-center">
-                            <i class="fas fa-magic mr-2"></i> צור עם AI
-                        </button>
-                    </div>
-                </div>
-                
+            <div class="flex flex-col md:flex-row gap-6">
                 <!-- Main Editor Area -->
-                <div class="p-4">
-                    <!-- Story Input -->
-                    <div class="mb-6">
-                        <label for="comic-story" class="block text-sm font-medium text-gray-700 mb-2">הסיפור שלך</label>
-                        <textarea id="comic-story" rows="4" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border border-gray-300 rounded-md p-2" placeholder="הקלד את הסיפור שלך כאן..."></textarea>
-                        <div class="mt-2 flex justify-end">
-                            <button id="split-panels" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-md text-sm hover:bg-indigo-200">
-                                חלק לפנלים
-                            </button>
-                        </div>
+                <div class="flex-1">
+                    <div class="mb-4">
+                        <label for="comic-title" class="block text-sm font-medium text-gray-700 mb-2">כותרת הקומיקס</label>
+                        <input type="text" id="comic-title" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="הכנס כותרת לקומיקס שלך">
                     </div>
                     
-                    <!-- AI Generation Options (hidden by default) -->
-                    <div id="ai-options" class="mb-6 p-4 bg-indigo-50 rounded-md hidden">
-                        <h3 class="text-lg font-medium text-indigo-800 mb-3">יצירת סיפור עם AI</h3>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="ai-genre" class="block text-sm font-medium text-gray-700 mb-1">ז'אנר</label>
-                                <select id="ai-genre" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                                    <option>הרפתקאות</option>
-                                    <option>מדע בדיוני</option>
-                                    <option>פנטזיה</option>
-                                    <option>מסתורין</option>
-                                    <option>רומנטיקה</option>
-                                    <option>קומדיה</option>
-                                </select>
-                            </div>
-                            
-                            <div>
-                                <label for="ai-length" class="block text-sm font-medium text-gray-700 mb-1">אורך הסיפור</label>
-                                <select id="ai-length" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                                    <option value="short">קצר (3-5 פנלים)</option>
-                                    <option value="medium">בינוני (6-9 פנלים)</option>
-                                    <option value="long">ארוך (10+ פנלים)</option>
-                                </select>
-                            </div>
-                            
-                            <div class="md:col-span-2">
-                                <label for="ai-prompt" class="block text-sm font-medium text-gray-700 mb-1">הנחיות נוספות</label>
-                                <input type="text" id="ai-prompt" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2" placeholder="לדוגמה: סיפור על גיבור על שמציל את העיר מחייזרים">
-                            </div>
-                        </div>
-                        
-                        <div class="mt-4 flex justify-end space-x-3">
-                            <button id="cancel-ai" class="bg-white text-gray-700 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                                ביטול
-                            </button>
-                            <button id="generate-story" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 flex items-center">
-                                <span id="generate-text">צור סיפור</span>
-                                <span id="generate-spinner" class="ml-2 hidden animate-spin">
-                                    <i class="fas fa-circle-notch"></i>
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Panels Container -->
-                    <div id="panels-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                        <!-- Empty state -->
-                        <div id="empty-state" class="col-span-full text-center py-12">
-                            <i class="fas fa-book-open text-4xl text-gray-400 mb-4"></i>
-                            <h3 class="text-lg font-medium text-gray-900">אין עדיין פנלים</h3>
-                            <p class="mt-1 text-sm text-gray-500">התחל להקליד סיפור ולחץ על "חלק לפנלים" או השתמש ב-AI כדי ליצור סיפור אוטומטית.</p>
-                        </div>
-                        
+                    <div id="comic-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <!-- Panels will be added here dynamically -->
+                        <div class="comic-panel rounded-lg p-4 flex items-center justify-center relative">
+                            <div class="text-center">
+                                <i class="fas fa-plus text-3xl text-gray-400 mb-2"></i>
+                                <p class="text-gray-500">לחץ כדי להוסיף פנל חדש</p>
+                            </div>
+                        </div>
                     </div>
                     
-                    <!-- Add Panel Button -->
-                    <div class="mt-6 flex justify-center">
-                        <button id="add-panel" class="bg-white text-indigo-600 px-4 py-2 border border-indigo-300 rounded-md hover:bg-indigo-50 flex items-center">
+                    <div class="flex justify-between">
+                        <button id="add-panel" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md">
                             <i class="fas fa-plus mr-2"></i> הוסף פנל
                         </button>
+                        <button id="generate-comic" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md">
+                            <i class="fas fa-magic mr-2"></i> צור קומיקס אוטומטי
+                        </button>
+                        <button id="download-comic" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-md">
+                            <i class="fas fa-download mr-2"></i> הורד קומיקס
+                        </button>
+                        <button id="save-project" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md">
+                            <i class="fas fa-save mr-2"></i> שמור פרויקט
+                        </button>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Admin Section (hidden by default) -->
-    <div id="admin-section" class="bg-white py-12 px-4 sm:px-6 lg:py-16 lg:px-8 hidden">
-        <div class="max-w-7xl mx-auto">
-            <h2 class="text-3xl font-bold text-gray-900 mb-8 text-center">ניהול מערכת</h2>
-            
-            <div class="bg-gray-50 shadow rounded-lg overflow-hidden">
-                <div class="p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="bg-white p-4 rounded-lg shadow">
-                            <h3 class="text-lg font-medium text-gray-900 mb-2">משתמשים רשומים</h3>
-                            <p class="text-3xl font-bold" id="user-count">0</p>
-                        </div>
-                        <div class="bg-white p-4 rounded-lg shadow">
-                            <h3 class="text-lg font-medium text-gray-900 mb-2">קומיקס שנוצרו</h3>
-                            <p class="text-3xl font-bold" id="comic-count">0</p>
-                        </div>
-                        <div class="bg-white p-4 rounded-lg shadow">
-                            <h3 class="text-lg font-medium text-gray-900 mb-2">שימוש ב-API</h3>
-                            <p class="text-3xl font-bold" id="api-usage">0</p>
-                            <p class="text-sm text-gray-500">בקשות בחודש האחרון</p>
-                        </div>
+                
+                <!-- Sidebar Settings -->
+                <div id="editor-sidebar" class="sidebar md:w-80 bg-gray-50 p-4 rounded-lg shadow">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">הגדרות קומיקס</h3>
+                        <button id="close-sidebar" class="md:hidden text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
                     
-                    <div class="bg-white p-4 rounded-lg shadow mb-6">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">הפצת דוח</h3>
-                        <div class="flex items-center">
-                            <input type="email" id="admin-email" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="y15761576@gmail.com" value="y15761576@gmail.com">
-                            <button id="send-report" class="ml-3 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
-                                שלח דוח
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">סגנון איור</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button class="art-style-btn border rounded-md p-2 hover:bg-gray-100" data-style="anime">
+                                <i class="fas fa-user-ninja text-2xl mb-1"></i>
+                                <span class="block text-xs">אנימה</span>
+                            </button>
+                            <button class="art-style-btn border rounded-md p-2 hover:bg-gray-100" data-style="realistic">
+                                <i class="fas fa-portrait text-2xl mb-1"></i>
+                                <span class="block text-xs">ריאליסטי</span>
+                            </button>
+                            <button class="art-style-btn border rounded-md p-2 hover:bg-gray-100 active" data-style="cartoon">
+                                <i class="fas fa-smile-beam text-2xl mb-1"></i>
+                                <span class="block text-xs">קריקטורה</span>
                             </button>
                         </div>
                     </div>
                     
-                    <div class="bg-white p-4 rounded-lg shadow">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">סטטיסטיקות אחרונות</h3>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תאריך</th>
-                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">משתמשים חדשים</th>
-                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">קומיקס חדשים</th>
-                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">בקשות API</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200" id="stats-table">
-                                    <!-- Stats will be loaded here -->
-                                </tbody>
-                            </table>
+                    <div class="mb-6">
+                        <label for="panel-layout" class="block text-sm font-medium text-gray-700 mb-2">מבנה פנלים</label>
+                        <select id="panel-layout" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
+                            <option value="1">1 פנל</option>
+                            <option value="2" selected>2 פנלים</option>
+                            <option value="3">3 פנלים</option>
+                            <option value="4">4 פנלים</option>
+                            <option value="custom">מותאם אישית</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label for="story-input" class="block text-sm font-medium text-gray-700 mb-2">הכנס סיפור</label>
+                        <textarea id="story-input" rows="5" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="הקלד את הסיפור שלך כאן..."></textarea>
+                        <button id="split-story" class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-1 px-3 rounded-md text-sm w-full">
+                            חלק לפנלים
+                        </button>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">דיבוב</label>
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="enable-voice" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                            <label for="enable-voice" class="mr-2 block text-sm text-gray-700">הפעל דיבוב</label>
+                        </div>
+                        <div id="voice-settings" class="hidden">
+                            <label for="voice-type" class="block text-sm font-medium text-gray-700 mb-2">סוג קול</label>
+                            <select id="voice-type" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
+                                <option value="male">גבר</option>
+                                <option value="female">אישה</option>
+                                <option value="child">ילד</option>
+                            </select>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
+
+        <!-- My Projects Section -->
+        <section id="projects" class="bg-white shadow rounded-lg p-6 mb-8 hidden">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">הפרויקטים שלי</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Project cards will be added here dynamically -->
+                <div class="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition duration-300">
+                    <div class="bg-gray-200 h-40 flex items-center justify-center">
+                        <i class="fas fa-image text-4xl text-gray-400"></i>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-medium text-lg mb-1">קומיקס לדוגמה</h3>
+                        <p class="text-gray-600 text-sm mb-3">נוצר ב: 01/01/2023</p>
+                        <div class="flex justify-between">
+                            <button class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                                <i class="fas fa-edit mr-1"></i> ערוך
+                            </button>
+                            <button class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                <i class="fas fa-trash mr-1"></i> מחק
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="no-projects" class="text-center py-10">
+                <i class="fas fa-folder-open text-4xl text-gray-400 mb-3"></i>
+                <h3 class="text-lg font-medium text-gray-700">אין פרויקטים שמורים</h3>
+                <p class="text-gray-500 mt-1">התחל פרויקט חדש בעורך הקומיקס</p>
+            </div>
+        </section>
+
+        <!-- Feedback Section -->
+        <section class="bg-white shadow rounded-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">משוב ודירוג</h2>
+            <div class="mb-4">
+                <label for="feedback-rating" class="block text-sm font-medium text-gray-700 mb-2">דרג את החוויה שלך</label>
+                <div class="flex space-x-1 space-x-reverse">
+                    <button class="rating-star text-gray-400 hover:text-yellow-400 text-2xl" data-rating="1">☆</button>
+                    <button class="rating-star text-gray-400 hover:text-yellow-400 text-2xl" data-rating="2">☆</button>
+                    <button class="rating-star text-gray-400 hover:text-yellow-400 text-2xl" data-rating="3">☆</button>
+                    <button class="rating-star text-gray-400 hover:text-yellow-400 text-2xl" data-rating="4">☆</button>
+                    <button class="rating-star text-gray-400 hover:text-yellow-400 text-2xl" data-rating="5">☆</button>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label for="feedback-comment" class="block text-sm font-medium text-gray-700 mb-2">משוב</label>
+                <textarea id="feedback-comment" rows="3" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="מה דעתך על הכלי שלנו?"></textarea>
+            </div>
+            <button id="submit-feedback" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md">
+                שלח משוב
+            </button>
+        </section>
+    </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-7xl mx-auto">
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div>
-                    <h3 class="text-lg font-medium mb-4">ComicGen</h3>
-                    <p class="text-gray-400">הפלטפורמה המתקדמת ליצירת קומיקס דיגיטלי עם בינה מלאכותית.</p>
+                    <h3 class="text-lg font-medium mb-4">יוצר קומיקס עם AI</h3>
+                    <p class="text-gray-400">הפוך את הסיפורים שלך לקומיקס מרהיב בעזרת בינה מלאכותית.</p>
                 </div>
                 <div>
-                    <h3 class="text-lg font-medium mb-4">קישורים</h3>
+                    <h3 class="text-lg font-medium mb-4">קישורים מהירים</h3>
                     <ul class="space-y-2">
                         <li><a href="#" class="text-gray-400 hover:text-white">בית</a></li>
-                        <li><a href="#editor" class="text-gray-400 hover:text-white">עורך</a></li>
-                        <li><a href="#api" class="text-gray-400 hover:text-white">API</a></li>
-                        <li><a href="#account" class="text-gray-400 hover:text-white">חשבון</a></li>
+                        <li><a href="#editor" class="text-gray-400 hover:text-white">עורך קומיקס</a></li>
+                        <li><a href="#api" class="text-gray-400 hover:text-white">מפתח API</a></li>
+                        <li><a href="#projects" class="text-gray-400 hover:text-white">פרויקטים שלי</a></li>
                     </ul>
                 </div>
                 <div>
                     <h3 class="text-lg font-medium mb-4">יצירת קשר</h3>
-                    <p class="text-gray-400">יש לך שאלות או הצעות?</p>
-                    <p class="text-indigo-400 mt-2">y15761576@gmail.com</p>
+                    <p class="text-gray-400 mb-2"><i class="fas fa-envelope mr-2"></i> y15761576@gmail.com</p>
+                    <div class="flex space-x-4 space-x-reverse">
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-instagram"></i></a>
+                    </div>
                 </div>
             </div>
-            <div class="mt-12 pt-8 border-t border-gray-700 text-center text-gray-400">
-                <p>© 2023 ComicGen. כל הזכויות שמורות.</p>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                <p>© 2023 יוצר קומיקס עם AI. כל הזכויות שמורות.</p>
             </div>
         </div>
     </footer>
 
+    <!-- Admin Modal (hidden by default) -->
+    <div id="admin-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">ניהול מערכת - סטטיסטיקות</h3>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h4 class="font-medium text-gray-700 mb-2">סטטיסטיקות משתמשים</h4>
+                                    <div class="space-y-2">
+                                        <p class="text-sm">משתמשים רשומים: <span class="font-medium" id="total-users">0</span></p>
+                                        <p class="text-sm">משתמשים פעילים (30 יום): <span class="font-medium" id="active-users">0</span></p>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h4 class="font-medium text-gray-700 mb-2">סטטיסטיקות קומיקס</h4>
+                                    <div class="space-y-2">
+                                        <p class="text-sm">סה"כ קומיקס שנוצרו: <span class="font-medium" id="total-comics">0</span></p>
+                                        <p class="text-sm">קומיקס בחודש האחרון: <span class="font-medium" id="monthly-comics">0</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <h4 class="font-medium text-gray-700 mb-2">דירוג ממוצע: <span id="avg-rating" class="text-yellow-500">0</span></h4>
+                                <div class="flex items-center">
+                                    <div class="flex space-x-1 space-x-reverse">
+                                        <span id="star-1" class="text-gray-400 text-xl">☆</span>
+                                        <span id="star-2" class="text-gray-400 text-xl">☆</span>
+                                        <span id="star-3" class="text-gray-400 text-xl">☆</span>
+                                        <span id="star-4" class="text-gray-400 text-xl">☆</span>
+                                        <span id="star-5" class="text-gray-400 text-xl">☆</span>
+                                    </div>
+                                    <span class="text-sm text-gray-500 mr-2">(<span id="total-feedbacks">0</span> דירוגים)</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="admin-email" class="block text-sm font-medium text-gray-700 mb-2">שלח דוח למייל</label>
+                                <input type="email" id="admin-email" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" value="y15761576@gmail.com">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button id="send-report" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                        שלח דוח
+                    </button>
+                    <button id="close-admin-modal" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        סגור
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Notification -->
+    <div id="success-notification" class="fixed bottom-4 left-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg hidden z-50">
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-2"></i>
+            <span id="success-message">הפעולה בוצעה בהצלחה!</span>
+        </div>
+    </div>
+
+    <!-- Error Notification -->
+    <div id="error-notification" class="fixed bottom-4 left-4 bg-red-500 text-white px-4 py-2 rounded-md shadow-lg hidden z-50">
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-circle mr-2"></i>
+            <span id="error-message">אירעה שגיאה. נסה שוב.</span>
+        </div>
+    </div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mobile menu toggle
-            const mobileMenuButton = document.getElementById('mobile-menu-button');
-            const mobileMenu = document.getElementById('mobile-menu');
+        // DOM Elements
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const userMenu = document.getElementById('user-menu');
+        const startEditor = document.getElementById('start-editor');
+        const editorSection = document.getElementById('editor');
+        const projectsSection = document.getElementById('projects');
+        const validateApi = document.getElementById('validate-api');
+        const apiKey = document.getElementById('api-key');
+        const apiStatus = document.getElementById('api-status');
+        const validateText = document.getElementById('validate-text');
+        const validateSpinner = document.getElementById('validate-spinner');
+        const loginBtn = document.getElementById('login-btn');
+        const registerBtn = document.getElementById('register-btn');
+        const toggleSidebar = document.getElementById('toggle-sidebar');
+        const editorSidebar = document.getElementById('editor-sidebar');
+        const closeSidebar = document.getElementById('close-sidebar');
+        const addPanel = document.getElementById('add-panel');
+        const comicContainer = document.getElementById('comic-container');
+        const generateComic = document.getElementById('generate-comic');
+        const downloadComic = document.getElementById('download-comic');
+        const saveProject = document.getElementById('save-project');
+        const artStyleBtns = document.querySelectorAll('.art-style-btn');
+        const panelLayout = document.getElementById('panel-layout');
+        const storyInput = document.getElementById('story-input');
+        const splitStory = document.getElementById('split-story');
+        const enableVoice = document.getElementById('enable-voice');
+        const voiceSettings = document.getElementById('voice-settings');
+        const comicTitle = document.getElementById('comic-title');
+        const noProjects = document.getElementById('no-projects');
+        const ratingStars = document.querySelectorAll('.rating-star');
+        const submitFeedback = document.getElementById('submit-feedback');
+        const adminModal = document.getElementById('admin-modal');
+        const closeAdminModal = document.getElementById('close-admin-modal');
+        const sendReport = document.getElementById('send-report');
+        const successNotification = document.getElementById('success-notification');
+        const errorNotification = document.getElementById('error-notification');
+        
+        // State
+        let currentUser = null;
+        let apiKeyValid = false;
+        let currentArtStyle = 'cartoon';
+        let currentRating = 0;
+        let panels = [];
+        
+        // Event Listeners
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+        
+        startEditor.addEventListener('click', () => {
+            editorSection.classList.remove('hidden');
+            projectsSection.classList.add('hidden');
+            window.scrollTo(0, editorSection.offsetTop);
+        });
+        
+        validateApi.addEventListener('click', () => {
+            const key = apiKey.value.trim();
             
-            mobileMenuButton.addEventListener('click', function() {
-                mobileMenu.classList.toggle('hidden');
-            });
+            if (!key) {
+                showError('נא להזין מפתח API');
+                return;
+            }
             
-            // API Key Check
-            const checkApiButton = document.getElementById('check-api');
-            const apiKeyInput = document.getElementById('api-key');
-            const apiStatus = document.getElementById('api-status');
-            const apiStatusIcon = document.getElementById('api-status-icon');
-            const apiStatusText = document.getElementById('api-status-text');
-            const checkApiSpinner = document.getElementById('check-api-spinner');
-            const checkApiText = document.getElementById('check-api-text');
+            // Show loading state
+            validateText.textContent = 'בודק...';
+            validateSpinner.classList.remove('hidden');
+            validateApi.disabled = true;
             
-            checkApiButton.addEventListener('click', function() {
-                const apiKey = apiKeyInput.value.trim();
+            // Simulate API validation (in a real app, this would be an actual API call)
+            setTimeout(() => {
+                // Randomly decide if the key is valid for demo purposes
+                const isValid = Math.random() > 0.3;
                 
-                if (!apiKey) {
-                    showApiStatus('error', 'נא להזין מפתח API');
-                    return;
-                }
+                validateApi.disabled = false;
+                validateSpinner.classList.add('hidden');
+                validateText.textContent = 'בדוק מפתח';
                 
-                // Show loading state
-                checkApiSpinner.classList.remove('hidden');
-                checkApiText.textContent = 'בודק...';
-                checkApiButton.disabled = true;
-                
-                // Simulate API check (in a real app, this would be an actual API call)
-                setTimeout(function() {
-                    checkApiSpinner.classList.add('hidden');
-                    checkApiText.textContent = 'בדוק API';
-                    checkApiButton.disabled = false;
-                    
-                    // For demo purposes, we'll randomly succeed or fail
-                    const isSuccess = Math.random() > 0.3;
-                    
-                    if (isSuccess) {
-                        showApiStatus('success', 'מפתח API תקין!');
-                        // In a real app, you would store the API key securely
-                        localStorage.setItem('gemini-api-key', apiKey);
-                    } else {
-                        showApiStatus('error', 'מפתח API לא תקין. נא לבדוק ולהזין שוב.');
-                    }
-                }, 1500);
-            });
-            
-            function showApiStatus(type, message) {
-                apiStatus.classList.remove('hidden');
-                
-                if (type === 'success') {
-                    apiStatusIcon.innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
-                    apiStatusText.className = 'text-green-600';
+                if (isValid) {
+                    apiKeyValid = true;
+                    apiStatus.classList.remove('hidden');
+                    apiStatus.querySelector('span').textContent = 'מפתח תקין';
+                    apiStatus.querySelector('span').classList.add('bg-green-100', 'text-green-800');
+                    showSuccess('המפתח אומת בהצלחה!');
                 } else {
-                    apiStatusIcon.innerHTML = '<i class="fas fa-times-circle text-red-500"></i>';
-                    apiStatusText.className = 'text-red-600';
+                    apiKeyValid = false;
+                    apiStatus.classList.remove('hidden');
+                    apiStatus.querySelector('span').textContent = 'מפתח לא תקין';
+                    apiStatus.querySelector('span').classList.add('bg-red-100', 'text-red-800');
+                    showError('מפתח API לא תקין. נסה מפתח אחר.');
                 }
-                
-                apiStatusText.textContent = message;
+            }, 1500);
+        });
+        
+        loginBtn.addEventListener('click', () => {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+            
+            if (!email || !password) {
+                showError('נא למלא את כל השדות');
+                return;
             }
             
-            // Account system
-            const loginForm = document.getElementById('login-form');
-            const registerForm = document.getElementById('register-form');
-            const accountView = document.getElementById('account-view');
-            const showRegister = document.getElementById('show-register');
-            const showLogin = document.getElementById('show-login');
-            const loginBtn = document.getElementById('login-btn');
-            const registerBtn = document.getElementById('register-btn');
-            const logoutBtn = document.getElementById('logout-btn');
-            const userEmail = document.getElementById('user-email');
-            const savedProjects = document.getElementById('saved-projects');
-            
-            // Check if user is already logged in
-            if (localStorage.getItem('comicgen-user')) {
-                const user = JSON.parse(localStorage.getItem('comicgen-user'));
-                showAccountView(user.email);
-            }
-            
-            showRegister.addEventListener('click', function(e) {
-                e.preventDefault();
-                loginForm.classList.add('hidden');
-                registerForm.classList.remove('hidden');
-            });
-            
-            showLogin.addEventListener('click', function(e) {
-                e.preventDefault();
-                registerForm.classList.add('hidden');
-                loginForm.classList.remove('hidden');
-            });
-            
-            loginBtn.addEventListener('click', function() {
-                const email = document.getElementById('email').value.trim();
-                const password = document.getElementById('password').value.trim();
-                
-                if (!email || !password) {
-                    alert('נא למלא את כל השדות');
-                    return;
-                }
-                
-                // In a real app, this would be an actual login request
-                // For demo, we'll just store the user in localStorage
-                const user = {
-                    email: email,
-                    // In a real app, you would NEVER store passwords like this
-                    // This is just for demo purposes
-                    password: password
-                };
-                
-                localStorage.setItem('comicgen-user', JSON.stringify(user));
-                showAccountView(email);
-                
-                // If this is the admin email, show admin section
-                if (email === 'y15761576@gmail.com') {
-                    document.getElementById('admin-section').classList.remove('hidden');
-                    loadAdminStats();
-                }
-            });
-            
-            registerBtn.addEventListener('click', function() {
-                const email = document.getElementById('reg-email').value.trim();
-                const password = document.getElementById('reg-password').value.trim();
-                const confirm = document.getElementById('reg-confirm').value.trim();
-                
-                if (!email || !password || !confirm) {
-                    alert('נא למלא את כל השדות');
-                    return;
-                }
-                
-                if (password !== confirm) {
-                    alert('הסיסמאות לא תואמות');
-                    return;
-                }
-                
-                if (password.length < 8) {
-                    alert('הסיסמה חייבת להכיל לפחות 8 תווים');
-                    return;
-                }
-                
-                // In a real app, this would be an actual registration request
-                // For demo, we'll just store the user in localStorage
-                const user = {
-                    email: email,
-                    // Again, in a real app you would NEVER store passwords like this
-                    password: password
-                };
-                
-                localStorage.setItem('comicgen-user', JSON.stringify(user));
-                showAccountView(email);
-                
-                // Clear registration form
-                document.getElementById('reg-email').value = '';
-                document.getElementById('reg-password').value = '';
-                document.getElementById('reg-confirm').value = '';
-                
-                // Show success message
-                alert('החשבון נוצר בהצלחה! כעת אתה מחובר.');
-            });
-            
-            logoutBtn.addEventListener('click', function() {
-                localStorage.removeItem('comicgen-user');
-                accountView.classList.add('hidden');
-                loginForm.classList.remove('hidden');
-                
-                // Hide admin section if visible
-                document.getElementById('admin-section').classList.add('hidden');
-            });
-            
-            function showAccountView(email) {
-                loginForm.classList.add('hidden');
-                registerForm.classList.add('hidden');
-                accountView.classList.remove('hidden');
-                
-                userEmail.textContent = email;
-                
-                // Load saved projects (demo only)
-                loadSavedProjects();
-            }
-            
-            function loadSavedProjects() {
-                // In a real app, this would fetch from a database
-                // For demo, we'll use mock data
-                savedProjects.innerHTML = `
-                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                        <div>
-                            <i class="fas fa-book text-indigo-500 mr-2"></i>
-                            <span>ההרפתקה שלי</span>
-                        </div>
-                        <button class="text-indigo-600 hover:text-indigo-800">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </div>
-                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                        <div>
-                            <i class="fas fa-book text-indigo-500 mr-2"></i>
-                            <span>גיבורי העל</span>
-                        </div>
-                        <button class="text-indigo-600 hover:text-indigo-800">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </div>
-                `;
-            }
-            
-            // Comic Editor Functionality
-            const comicStory = document.getElementById('comic-story');
-            const splitPanelsBtn = document.getElementById('split-panels');
-            const panelsContainer = document.getElementById('panels-container');
-            const emptyState = document.getElementById('empty-state');
-            const addPanelBtn = document.getElementById('add-panel');
-            const aiGenerateBtn = document.getElementById('ai-generate');
-            const aiOptions = document.getElementById('ai-options');
-            const cancelAiBtn = document.getElementById('cancel-ai');
-            const generateStoryBtn = document.getElementById('generate-story');
-            const generateText = document.getElementById('generate-text');
-            const generateSpinner = document.getElementById('generate-spinner');
-            const artStyleSelect = document.getElementById('art-style');
-            const newComicBtn = document.getElementById('new-comic');
-            const saveComicBtn = document.getElementById('save-comic');
-            const downloadComicBtn = document.getElementById('download-comic');
-            
-            let currentComic = {
-                title: 'קומיקס ללא שם',
-                panels: [],
-                artStyle: 'anime',
-                lastSaved: null
+            // Simulate login
+            currentUser = {
+                email: email,
+                name: email.split('@')[0]
             };
             
-            // Split story into panels
-            splitPanelsBtn.addEventListener('click', function() {
-                const story = comicStory.value.trim();
-                
-                if (!story) {
-                    alert('נא להזין סיפור לפני חלוקה לפנלים');
-                    return;
+            showSuccess('התחברת בהצלחה!');
+            updateUserUI();
+        });
+        
+        registerBtn.addEventListener('click', () => {
+            const email = document.getElementById('register-email').value.trim();
+            const password = document.getElementById('register-password').value.trim();
+            const confirm = document.getElementById('register-confirm').value.trim();
+            
+            if (!email || !password || !confirm) {
+                showError('נא למלא את כל השדות');
+                return;
+            }
+            
+            if (password !== confirm) {
+                showError('הסיסמאות לא תואמות');
+                return;
+            }
+            
+            // Simulate registration
+            currentUser = {
+                email: email,
+                name: email.split('@')[0]
+            };
+            
+            showSuccess('נרשמת בהצלחה! כעת אתה מחובר.');
+            updateUserUI();
+        });
+        
+        toggleSidebar.addEventListener('click', () => {
+            editorSidebar.classList.add('open');
+        });
+        
+        closeSidebar.addEventListener('click', () => {
+            editorSidebar.classList.remove('open');
+        });
+        
+        addPanel.addEventListener('click', () => {
+            addNewPanel();
+        });
+        
+        panelLayout.addEventListener('change', (e) => {
+            const layout = e.target.value;
+            
+            if (layout === 'custom') {
+                // Allow custom panel addition
+                return;
+            }
+            
+            // Clear existing panels
+            comicContainer.innerHTML = '';
+            
+            // Add specified number of panels
+            for (let i = 0; i < parseInt(layout); i++) {
+                addNewPanel();
+            }
+        });
+        
+        artStyleBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                artStyleBtns.forEach(b => b.classList.remove('active', 'bg-indigo-100', 'border-indigo-300'));
+                btn.classList.add('active', 'bg-indigo-100', 'border-indigo-300');
+                currentArtStyle = btn.dataset.style;
+            });
+        });
+        
+        enableVoice.addEventListener('change', () => {
+            if (enableVoice.checked) {
+                voiceSettings.classList.remove('hidden');
+            } else {
+                voiceSettings.classList.add('hidden');
+            }
+        });
+        
+        splitStory.addEventListener('click', () => {
+            const story = storyInput.value.trim();
+            
+            if (!story) {
+                showError('נא להזין סיפור לחלוקה');
+                return;
+            }
+            
+            // Clear existing panels
+            comicContainer.innerHTML = '';
+            
+            // Split story into sentences (simple split for demo)
+            const sentences = story.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            
+            // Create panels for each sentence
+            sentences.forEach((sentence, index) => {
+                if (index < 4) { // Limit to 4 panels for demo
+                    addNewPanel(sentence.trim());
                 }
-                
-                // Simple splitting by sentences for demo
-                // In a real app, you might use more sophisticated NLP
-                const sentences = story.split(/[.!?]+/).filter(s => s.trim().length > 0);
-                
+            });
+            
+            if (sentences.length === 0) {
+                addNewPanel();
+            }
+            
+            showSuccess('הסיפור חולק לפנלים בהצלחה!');
+        });
+        
+        generateComic.addEventListener('click', () => {
+            if (!apiKeyValid) {
+                showError('נא להזין מפתח API תקין תחילה');
+                return;
+            }
+            
+            if (!currentUser) {
+                showError('נא להתחבר כדי ליצור קומיקס אוטומטי');
+                return;
+            }
+            
+            const title = comicTitle.value.trim() || 'קומיקס ללא כותרת';
+            
+            // Show loading state
+            generateComic.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> יוצר קומיקס...';
+            generateComic.disabled = true;
+            
+            // Simulate AI comic generation
+            setTimeout(() => {
                 // Clear existing panels
-                panelsContainer.innerHTML = '';
-                currentComic.panels = [];
+                comicContainer.innerHTML = '';
                 
-                if (sentences.length === 0) {
-                    emptyState.classList.remove('hidden');
-                    return;
-                }
-                
-                emptyState.classList.add('hidden');
-                
-                // Create panels
-                sentences.forEach((sentence, index) => {
-                    addPanelToComic(sentence.trim(), index);
-                });
-            });
-            
-            // Add new panel
-            addPanelBtn.addEventListener('click', function() {
-                if (emptyState && !emptyState.classList.contains('hidden')) {
-                    emptyState.classList.add('hidden');
-                }
-                
-                addPanelToComic('', currentComic.panels.length);
-            });
-            
-            function addPanelToComic(text, position) {
-                const panelId = 'panel-' + Date.now();
-                const panel = {
-                    id: panelId,
-                    text: text,
-                    image: null,
-                    position: position
-                };
-                
-                currentComic.panels.push(panel);
-                renderPanel(panel);
-            }
-            
-            function renderPanel(panel) {
-                const panelElement = document.createElement('div');
-                panelElement.className = 'comic-panel bg-white rounded-lg shadow p-4 relative group';
-                panelElement.id = panel.id;
-                panelElement.draggable = true;
-                panelElement.dataset.position = panel.position;
-                
-                panelElement.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-xs text-gray-500">פנל #${parseInt(panel.position) + 1}</span>
-                        <button class="text-gray-400 hover:text-red-500 delete-panel" title="מחק פנל">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <textarea class="w-full border border-gray-300 rounded p-2 mb-3 text-sm" placeholder="הטקסט של הפנל">${panel.text}</textarea>
-                    <div class="panel-image-container bg-gray-100 rounded flex items-center justify-center" style="height: 150px;">
-                        ${panel.image ? 
-                            `<img src="${panel.image}" class="max-h-full max-w-full">` : 
-                            `<i class="fas fa-image text-gray-400 text-3xl"></i>`
-                        }
-                    </div>
-                    <div class="mt-3 flex justify-between items-center">
-                        <button class="text-xs text-indigo-600 hover:text-indigo-800 generate-image" title="צור תמונה">
-                            <i class="fas fa-magic mr-1"></i> צור תמונה
-                        </button>
-                        <button class="text-xs text-gray-600 hover:text-gray-800 add-dialog" title="הוסף דיאלוג">
-                            <i class="fas fa-comment mr-1"></i> דיאלוג
-                        </button>
-                    </div>
-                `;
-                
-                panelsContainer.appendChild(panelElement);
-                
-                // Make panel draggable
-                setupDragAndDrop(panelElement);
-                
-                // Add event listeners for panel controls
-                const textarea = panelElement.querySelector('textarea');
-                const deleteBtn = panelElement.querySelector('.delete-panel');
-                const generateBtn = panelElement.querySelector('.generate-image');
-                const dialogBtn = panelElement.querySelector('.add-dialog');
-                
-                textarea.addEventListener('input', function() {
-                    const panelIndex = currentComic.panels.findIndex(p => p.id === panel.id);
-                    if (panelIndex !== -1) {
-                        currentComic.panels[panelIndex].text = textarea.value;
-                    }
-                });
-                
-                deleteBtn.addEventListener('click', function() {
-                    if (confirm('האם אתה בטוח שברצונך למחוק את הפנל הזה?')) {
-                        panelElement.remove();
-                        currentComic.panels = currentComic.panels.filter(p => p.id !== panel.id);
-                        
-                        if (currentComic.panels.length === 0) {
-                            emptyState.classList.remove('hidden');
-                        }
-                    }
-                });
-                
-                generateBtn.addEventListener('click', function() {
-                    generateImageForPanel(panel.id);
-                });
-                
-                dialogBtn.addEventListener('click', function() {
-                    addDialogToPanel(panel.id);
-                });
-            }
-            
-            function setupDragAndDrop(panelElement) {
-                panelElement.addEventListener('dragstart', function(e) {
-                    e.dataTransfer.setData('text/plain', panelElement.id);
-                    panelElement.classList.add('opacity-50');
-                });
-                
-                panelElement.addEventListener('dragend', function() {
-                    panelElement.classList.remove('opacity-50');
-                });
-                
-                panelElement.addEventListener('dragover', function(e) {
-                    e.preventDefault();
-                    panelElement.classList.add('drag-over');
-                });
-                
-                panelElement.addEventListener('dragleave', function() {
-                    panelElement.classList.remove('drag-over');
-                });
-                
-                panelElement.addEventListener('drop', function(e) {
-                    e.preventDefault();
-                    panelElement.classList.remove('drag-over');
-                    
-                    const draggedId = e.dataTransfer.getData('text/plain');
-                    const draggedElement = document.getElementById(draggedId);
-                    const targetPosition = parseInt(panelElement.dataset.position);
-                    
-                    if (draggedId !== panelElement.id) {
-                        // Swap positions in the DOM
-                        if (draggedElement.compareDocumentPosition(panelElement) & Node.DOCUMENT_POSITION_FOLLOWING) {
-                            panelElement.parentNode.insertBefore(draggedElement, panelElement);
-                        } else {
-                            panelElement.parentNode.insertBefore(draggedElement, panelElement.nextSibling);
-                        }
-                        
-                        // Update positions in the data model
-                        const draggedIndex = currentComic.panels.findIndex(p => p.id === draggedId);
-                        const targetIndex = currentComic.panels.findIndex(p => p.id === panelElement.id);
-                        
-                        if (draggedIndex !== -1 && targetIndex !== -1) {
-                            // Swap positions
-                            const tempPos = currentComic.panels[draggedIndex].position;
-                            currentComic.panels[draggedIndex].position = currentComic.panels[targetIndex].position;
-                            currentComic.panels[targetIndex].position = tempPos;
-                            
-                            // Sort panels array by position
-                            currentComic.panels.sort((a, b) => a.position - b.position);
-                            
-                            // Update all panel positions in DOM
-                            currentComic.panels.forEach((panel, index) => {
-                                const el = document.getElementById(panel.id);
-                                if (el) {
-                                    el.dataset.position = index;
-                                    const panelNumber = el.querySelector('span');
-                                    if (panelNumber) {
-                                        panelNumber.textContent = `פנל #${index + 1}`;
-                                    }
-                                }
-                            });
-                        }
-                    }
-                });
-            }
-            
-            // AI Generation
-            aiGenerateBtn.addEventListener('click', function() {
-                aiOptions.classList.remove('hidden');
-            });
-            
-            cancelAiBtn.addEventListener('click', function() {
-                aiOptions.classList.add('hidden');
-            });
-            
-            generateStoryBtn.addEventListener('click', function() {
-                const genre = document.getElementById('ai-genre').value;
-                const length = document.getElementById('ai-length').value;
-                const prompt = document.getElementById('ai-prompt').value;
-                
-                if (!prompt) {
-                    alert('נא להזין הנחיות לסיפור');
-                    return;
-                }
-                
-                // Show loading state
-                generateText.textContent = 'יוצר...';
-                generateSpinner.classList.remove('hidden');
-                generateStoryBtn.disabled = true;
-                
-                // Simulate API call to generate story
-                setTimeout(function() {
-                    generateText.textContent = 'צור סיפור';
-                    generateSpinner.classList.add('hidden');
-                    generateStoryBtn.disabled = false;
-                    aiOptions.classList.add('hidden');
-                    
-                    // Generate mock story based on inputs
-                    let panelCount = 3; // default for short
-                    if (length === 'medium') panelCount = 6;
-                    if (length === 'long') panelCount = 10;
-                    
-                    const mockStories = {
-                        'הרפתקאות': [
-                            "הגיבור שלנו מתעורר ביער מסתורי ללא זיכרון.",
-                            "הוא מגלה מפה מוזרה בכיסו המובילה לאוצר עתיק.",
-                            "בדרך הוא פוגש חברים חדשים שיעזרו לו במסע.",
-                            "הם מתגברים על מכשולים ומלכודות מתוחכמות.",
-                            "הם מגיעים למערה בה שומר על האוצר דרקון ענק.",
-                            "בעזרת תושייה ועבודה צוותית הם מביסים את הדרקון.",
-                            "האוצר מתגלה כקמע קסום עם כוחות מיוחדים.",
-                            "הגיבור מקבל חזרה את זיכרונו ומבין את ייעודו.",
-                            "הוא וחבריו חוזרים הביתה כגיבורים.",
-                            "הם נשבעים להמשיך בהרפתקאות חדשות בעתיד."
-                        ],
-                        'מדע בדיוני': [
-                            "החללית של קפטן נובה מתרסקת על כוכב לא מוכר.",
-                            "הצוות מגלה שהכוכב מאוכלס בציוויליזציה מתקדמת.",
-                            "התושבים המקומיים חושדים בהם ומציבים אותם במאסר.",
-                            "קפטן נובה מצליח לתקשר עם מנהיג הכוכב.",
-                            "מתברר שהכוכב נמצא תחת מתקפה של גזע חייזרים עוין.",
-                            "הצוות מציע לעזור בהגנה תמורת עזרה בתיקון החללית.",
-                            "בעזרת הטכנולוגיה המתקדמת הם יוצרים מגן פלנטרי.",
-                            "הם מצליחים להדוף את הפולשים ולהציל את הכוכב.",
-                            "התושבים המוקירים תודה עוזרים להם לתקן את החללית.",
-                            "הצוות ממשיך במסעם ברחבי הגלקסיה עם ידידים חדשים."
-                        ],
-                        'פנטזיה': [
-                            "ילדה מגלה שהיא נסיכה מממלכה קסומה שנשכחה.",
-                            "חבר דמיוני שלה מתגלה כפיה אמיתית שנשלחה להגן עליה.",
-                            "יחד הם יוצאים למסע לעבר השער לממלכה הקסומה.",
-                            "בדרך הם פוגשים יצורים מיתולוגיים וחברים חדשים.",
-                            "הם מגלים שהממלכה תחת קללה שגרמה לכולם לשכוח אותה.",
-                            "כדי להסיר את הקללה, הנסיכה צריכה למצוא כתר עתיק.",
-                            "הכתר נמצא בטירה נשכחת המוגנת על ידי מפלצות.",
-                            "בעזרת חבריה החדשים, הנסיכה משיגה את הכתר.",
-                            "היא מסירה את הקללה והממלכה חוזרת לתודעה.",
-                            "הנסיכה מוכתרת כמלכה החדשה של הממלכה הקסומה."
-                        ]
-                    };
-                    
-                    const selectedStory = mockStories[genre] || mockStories['הרפתקאות'];
-                    const storyPanels = selectedStory.slice(0, panelCount);
-                    
-                    // Clear existing panels
-                    panelsContainer.innerHTML = '';
-                    currentComic.panels = [];
-                    
-                    if (storyPanels.length === 0) {
-                        emptyState.classList.remove('hidden');
-                        return;
-                    }
-                    
-                    emptyState.classList.add('hidden');
-                    
-                    // Update story textarea
-                    comicStory.value = storyPanels.join('. ') + '.';
-                    
-                    // Create panels
-                    storyPanels.forEach((panelText, index) => {
-                        addPanelToComic(panelText, index);
-                    });
-                    
-                    alert('הסיפור נוצר בהצלחה! כעת תוכל לערוך את הפנלים או ליצור תמונות עבורם.');
-                }, 2500);
-            });
-            
-            function generateImageForPanel(panelId) {
-                const panelIndex = currentComic.panels.findIndex(p => p.id === panelId);
-                if (panelIndex === -1) return;
-                
-                const panel = currentComic.panels[panelIndex];
-                const panelElement = document.getElementById(panelId);
-                
-                if (!panel.text) {
-                    alert('נא להזין טקסט לפנל לפני יצירת תמונה');
-                    return;
-                }
-                
-                // Check if API key is set
-                if (!localStorage.getItem('gemini-api-key')) {
-                    alert('נא להזין מפתח API תקף לפני יצירת תמונות');
-                    document.getElementById('api').scrollIntoView({ behavior: 'smooth' });
-                    return;
-                }
-                
-                // Show loading state on the panel
-                const imageContainer = panelElement.querySelector('.panel-image-container');
-                const originalContent = imageContainer.innerHTML;
-                imageContainer.innerHTML = '<div class="text-center"><i class="fas fa-circle-notch animate-spin text-indigo-500 text-2xl"></i><p class="text-sm mt-2">יוצר תמונה...</p></div>';
-                
-                // Simulate API call to generate image
-                setTimeout(function() {
-                    // In a real app, this would use the actual API to generate an image
-                    // For demo, we'll use placeholder images based on art style
-                    const style = artStyleSelect.value;
-                    let imageUrl = '';
-                    
-                    switch(style) {
-                        case 'anime':
-                            imageUrl = 'https://placekitten.com/300/200';
-                            break;
-                        case 'realistic':
-                            imageUrl = 'https://picsum.photos/300/200';
-                            break;
-                        case 'cartoon':
-                            imageUrl = 'https://placebear.com/300/200';
-                            break;
-                        case 'manga':
-                            imageUrl = 'https://placedog.net/300/200';
-                            break;
-                        case 'pixel':
-                            imageUrl = 'https://baconmockup.com/300/200';
-                            break;
-                        default:
-                            imageUrl = 'https://placekitten.com/300/200';
-                    }
-                    
-                    // Update panel with generated image
-                    currentComic.panels[panelIndex].image = imageUrl;
-                    imageContainer.innerHTML = `<img src="${imageUrl}" class="max-h-full max-w-full rounded">`;
-                    
-                    // Show success message
-                    const successMsg = document.createElement('div');
-                    successMsg.className = 'text-xs text-green-600 mt-1 text-center';
-                    successMsg.textContent = 'תמונה נוצרה בהצלחה!';
-                    imageContainer.parentNode.insertBefore(successMsg, imageContainer.nextSibling);
-                    
-                    setTimeout(() => {
-                        successMsg.remove();
-                    }, 3000);
-                }, 2000);
-            }
-            
-            function addDialogToPanel(panelId) {
-                const panelIndex = currentComic.panels.findIndex(p => p.id === panelId);
-                if (panelIndex === -1) return;
-                
-                const panelElement = document.getElementById(panelId);
-                const imageContainer = panelElement.querySelector('.panel-image-container');
-                
-                // Create dialog bubble element
-                const dialogBubble = document.createElement('div');
-                dialogBubble.className = 'dialog-bubble absolute bg-white rounded-lg p-2 shadow-md border border-gray-200';
-                dialogBubble.style.top = '50%';
-                dialogBubble.style.left = '50%';
-                dialogBubble.style.transform = 'translate(-50%, -50%)';
-                dialogBubble.style.zIndex = '10';
-                dialogBubble.style.width = '80%';
-                
-                dialogBubble.innerHTML = `
-                    <textarea class="w-full border-none focus:ring-0 text-sm" placeholder="הקלד את הדיאלוג כאן..."></textarea>
-                    <div class="flex justify-between items-center mt-2">
-                        <button class="text-xs text-red-500 delete-dialog">
-                            <i class="fas fa-trash"></i> מחק
-                        </button>
-                        <button class="text-xs text-indigo-500 save-dialog">
-                            <i class="fas fa-check"></i> שמור
-                        </button>
-                    </div>
-                `;
-                
-                // Add to image container
-                imageContainer.style.position = 'relative';
-                imageContainer.appendChild(dialogBubble);
-                
-                // Focus on textarea
-                const textarea = dialogBubble.querySelector('textarea');
-                textarea.focus();
-                
-                // Save dialog
-                const saveBtn = dialogBubble.querySelector('.save-dialog');
-                saveBtn.addEventListener('click', function() {
-                    const dialogText = textarea.value.trim();
-                    
-                    if (dialogText) {
-                        // In a real app, you would save the dialog to the panel data
-                        // For demo, we'll just show it as a styled bubble
-                        dialogBubble.className = 'dialog-bubble absolute bg-white rounded-lg p-2 shadow-md border border-gray-200 text-sm';
-                        dialogBubble.style.width = 'auto';
-                        dialogBubble.style.maxWidth = '80%';
-                        dialogBubble.innerHTML = dialogText;
-                        
-                        // Make draggable
-                        makeDraggable(dialogBubble);
-                        
-                        // Add delete button
-                        const deleteBtn = document.createElement('button');
-                        deleteBtn.className = 'delete-dialog absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs';
-                        deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
-                        dialogBubble.appendChild(deleteBtn);
-                        
-                        deleteBtn.addEventListener('click', function() {
-                            dialogBubble.remove();
-                        });
-                    } else {
-                        dialogBubble.remove();
-                    }
-                });
-                
-                // Delete dialog
-                const deleteBtn = dialogBubble.querySelector('.delete-dialog');
-                deleteBtn.addEventListener('click', function() {
-                    dialogBubble.remove();
-                });
-            }
-            
-            function makeDraggable(element) {
-                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-                
-                element.onmousedown = dragMouseDown;
-                
-                function dragMouseDown(e) {
-                    e = e || window.event;
-                    e.preventDefault();
-                    
-                    // Get the mouse cursor position at startup
-                    pos3 = e.clientX;
-                    pos4 = e.clientY;
-                    
-                    document.onmouseup = closeDragElement;
-                    document.onmousemove = elementDrag;
-                }
-                
-                function elementDrag(e) {
-                    e = e || window.event;
-                    e.preventDefault();
-                    
-                    // Calculate the new cursor position
-                    pos1 = pos3 - e.clientX;
-                    pos2 = pos4 - e.clientY;
-                    pos3 = e.clientX;
-                    pos4 = e.clientY;
-                    
-                    // Set the element's new position
-                    element.style.top = (element.offsetTop - pos2) + "px";
-                    element.style.left = (element.offsetLeft - pos1) + "px";
-                }
-                
-                function closeDragElement() {
-                    // Stop moving when mouse button is released
-                    document.onmouseup = null;
-                    document.onmousemove = null;
-                }
-            }
-            
-            // New comic
-            newComicBtn.addEventListener('click', function() {
-                if (currentComic.panels.length > 0 && !confirm('האם אתה בטוח שברצונך להתחיל קומיקס חדש? כל השינויים שלא נשמרו יאבדו.')) {
-                    return;
-                }
-                
-                currentComic = {
-                    title: 'קומיקס ללא שם',
-                    panels: [],
-                    artStyle: 'anime',
-                    lastSaved: null
-                };
-                
-                comicStory.value = '';
-                panelsContainer.innerHTML = '';
-                emptyState.classList.remove('hidden');
-            });
-            
-            // Save comic
-            saveComicBtn.addEventListener('click', function() {
-                if (currentComic.panels.length === 0) {
-                    alert('לא ניתן לשמור קומיקס ללא פנלים');
-                    return;
-                }
-                
-                if (!localStorage.getItem('comicgen-user')) {
-                    alert('נא להתחבר כדי לשמור את הקומיקס שלך');
-                    document.getElementById('account').scrollIntoView({ behavior: 'smooth' });
-                    return;
-                }
-                
-                currentComic.lastSaved = new Date().toISOString();
-                
-                // In a real app, this would save to a database
-                // For demo, we'll save to localStorage
-                let savedComics = JSON.parse(localStorage.getItem('comicgen-comics') || '[]');
-                
-                // Check if this comic already exists
-                const existingIndex = savedComics.findIndex(c => c.title === currentComic.title);
-                
-                if (existingIndex !== -1) {
-                    savedComics[existingIndex] = currentComic;
-                } else {
-                    // Generate a title if none exists
-                    if (currentComic.title === 'קומיקס ללא שם') {
-                        const firstSentence = currentComic.panels[0].text.split('.')[0];
-                        currentComic.title = firstSentence.length > 20 ? firstSentence.substring(0, 20) + '...' : firstSentence;
-                    }
-                    
-                    savedComics.push(currentComic);
-                }
-                
-                localStorage.setItem('comicgen-comics', JSON.stringify(savedComics));
-                
-                // Show success message
-                const originalText = saveComicBtn.innerHTML;
-                saveComicBtn.innerHTML = '<i class="fas fa-check mr-1"></i> נשמר!';
-                
-                setTimeout(() => {
-                    saveComicBtn.innerHTML = originalText;
-                }, 2000);
-                
-                // Update saved projects list
-                if (accountView && !accountView.classList.contains('hidden')) {
-                    loadSavedProjects();
-                }
-            });
-            
-            // Download comic
-            downloadComicBtn.addEventListener('click', function() {
-                if (currentComic.panels.length === 0) {
-                    alert('לא ניתן להוריד קומיקס ללא פנלים');
-                    return;
-                }
-                
-                // In a real app, this would generate an actual image
-                // For demo, we'll show a message
-                alert('בגרסה המלאה של האפליקציה, זה היה מוריד את הקומיקס כתמונה.');
-            });
-            
-            // Art style change
-            artStyleSelect.addEventListener('change', function() {
-                currentComic.artStyle = this.value;
-            });
-            
-            // Admin functionality
-            function loadAdminStats() {
-                // In a real app, this would fetch from a database
-                // For demo, we'll use mock data
-                document.getElementById('user-count').textContent = '1,248';
-                document.getElementById('comic-count').textContent = '3,742';
-                document.getElementById('api-usage').textContent = '12,489';
-                
-                const statsTable = document.getElementById('stats-table');
-                statsTable.innerHTML = '';
-                
-                const mockStats = [
-                    { date: '2023-06-01', newUsers: 42, newComics: 128, apiRequests: 512 },
-                    { date: '2023-05-01', newUsers: 38, newComics: 115, apiRequests: 487 },
-                    { date: '2023-04-01', newUsers: 56, newComics: 142, apiRequests: 621 },
-                    { date: '2023-03-01', newUsers: 29, newComics: 98, apiRequests: 412 },
-                    { date: '2023-02-01', newUsers: 31, newComics: 104, apiRequests: 398 }
+                // Add generated panels
+                const generatedPanels = [
+                    'גיבור העל עומד על גג בניין גבוה, מביט אל העיר למטה.',
+                    'פיצוץ ענק מתרחש במרכז העיר, אנשים בורחים בבהלה.',
+                    'הגיבור קופץ מהגג, מתכונן לעצור את הפושעים.',
+                    'הגיבור מנצח את הרעים ומציל את העיר.'
                 ];
                 
-                mockStats.forEach(stat => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stat.date}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stat.newUsers}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stat.newComics}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stat.apiRequests}</td>
-                    `;
-                    statsTable.appendChild(row);
+                generatedPanels.forEach(panelText => {
+                    addNewPanel(panelText);
                 });
+                
+                comicTitle.value = title;
+                showSuccess('הקומיקס נוצר בהצלחה!');
+                
+                generateComic.innerHTML = '<i class="fas fa-magic mr-2"></i> צור קומיקס אוטומטי';
+                generateComic.disabled = false;
+            }, 2000);
+        });
+        
+        downloadComic.addEventListener('click', () => {
+            if (panels.length === 0) {
+                showError('נא ליצור קומיקס לפני הורדה');
+                return;
             }
             
-            // Send report
-            document.getElementById('send-report').addEventListener('click', function() {
-                const email = document.getElementById('admin-email').value.trim();
+            // In a real app, this would generate an actual image
+            showSuccess('הקומיקס הורד למכשיר שלך! (סימולציה)');
+        });
+        
+        saveProject.addEventListener('click', () => {
+            if (!currentUser) {
+                showError('נא להתחבר כדי לשמור פרויקט');
+                return;
+            }
+            
+            if (panels.length === 0) {
+                showError('נא ליצור קומיקס לפני שמירה');
+                return;
+            }
+            
+            const title = comicTitle.value.trim() || 'קומיקס ללא כותרת';
+            
+            // In a real app, this would save to a database
+            showSuccess(`הפרויקט "${title}" נשמר בהצלחה!`);
+        });
+        
+        ratingStars.forEach(star => {
+            star.addEventListener('click', () => {
+                const rating = parseInt(star.dataset.rating);
+                currentRating = rating;
                 
-                if (!email) {
-                    alert('נא להזין כתובת אימייל');
-                    return;
+                // Update star display
+                ratingStars.forEach((s, index) => {
+                    if (index < rating) {
+                        s.textContent = '★';
+                        s.classList.add('text-yellow-400');
+                        s.classList.remove('text-gray-400');
+                    } else {
+                        s.textContent = '☆';
+                        s.classList.remove('text-yellow-400');
+                        s.classList.add('text-gray-400');
+                    }
+                });
+            });
+        });
+        
+        submitFeedback.addEventListener('click', () => {
+            const comment = document.getElementById('feedback-comment').value.trim();
+            
+            if (currentRating === 0) {
+                showError('נא לדרג את החוויה שלך');
+                return;
+            }
+            
+            // In a real app, this would send to a server
+            showSuccess('תודה על המשוב שלך!');
+            
+            // Reset form
+            currentRating = 0;
+            ratingStars.forEach(star => {
+                star.textContent = '☆';
+                star.classList.remove('text-yellow-400');
+                star.classList.add('text-gray-400');
+            });
+            document.getElementById('feedback-comment').value = '';
+        });
+        
+        // Admin functionality (hidden in UI but accessible via console for demo)
+        function showAdminPanel() {
+            // Update stats with random data for demo
+            document.getElementById('total-users').textContent = Math.floor(Math.random() * 1000) + 50;
+            document.getElementById('active-users').textContent = Math.floor(Math.random() * 500) + 20;
+            document.getElementById('total-comics').textContent = Math.floor(Math.random() * 5000) + 100;
+            document.getElementById('monthly-comics').textContent = Math.floor(Math.random() * 300) + 50;
+            
+            const avgRating = (Math.random() * 2 + 3).toFixed(1);
+            document.getElementById('avg-rating').textContent = avgRating;
+            document.getElementById('total-feedbacks').textContent = Math.floor(Math.random() * 200) + 30;
+            
+            // Show stars based on rating
+            const fullStars = Math.floor(avgRating);
+            const hasHalfStar = avgRating % 1 >= 0.5;
+            
+            for (let i = 1; i <= 5; i++) {
+                const star = document.getElementById(`star-${i}`);
+                if (i <= fullStars) {
+                    star.textContent = '★';
+                    star.classList.add('text-yellow-400');
+                } else if (i === fullStars + 1 && hasHalfStar) {
+                    star.textContent = '½';
+                    star.classList.add('text-yellow-400');
+                } else {
+                    star.textContent = '☆';
+                    star.classList.remove('text-yellow-400');
+                }
+            }
+            
+            adminModal.classList.remove('hidden');
+        }
+        
+        closeAdminModal.addEventListener('click', () => {
+            adminModal.classList.add('hidden');
+        });
+        
+        sendReport.addEventListener('click', () => {
+            const email = document.getElementById('admin-email').value.trim();
+            
+            if (!email) {
+                showError('נא להזין כתובת אימייל');
+                return;
+            }
+            
+            showSuccess(`דוח ניהול נשלח ל-${email}`);
+            setTimeout(() => {
+                adminModal.classList.add('hidden');
+            }, 1500);
+        });
+        
+        // Helper Functions
+        function addNewPanel(text = '') {
+            const panelId = Date.now();
+            const panelCount = comicContainer.querySelectorAll('.comic-panel').length;
+            
+            const panelHTML = `
+                <div id="panel-${panelId}" class="comic-panel rounded-lg p-4 relative bg-white">
+                    <div class="absolute top-2 left-2 drag-handle text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
+                    <button class="absolute top-2 right-2 text-red-400 hover:text-red-600 delete-panel">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="h-full flex flex-col">
+                        <textarea class="flex-1 w-full p-2 mb-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="הכנס טקסט לפנל...">${text}</textarea>
+                        <div class="bg-gray-100 rounded-md flex-1 flex items-center justify-center">
+                            <span class="text-gray-500">תצוגה מקדימה של האיור</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            comicContainer.insertAdjacentHTML('beforeend', panelHTML);
+            panels.push(panelId);
+            
+            // Add event listeners to new panel
+            const panel = document.getElementById(`panel-${panelId}`);
+            const deleteBtn = panel.querySelector('.delete-panel');
+            const dragHandle = panel.querySelector('.drag-handle');
+            
+            deleteBtn.addEventListener('click', () => {
+                panel.remove();
+                panels = panels.filter(id => id !== panelId);
+            });
+            
+            // Simple drag functionality for demo
+            dragHandle.addEventListener('mousedown', (e) => {
+                panel.classList.add('active');
+                let shiftX = e.clientX - panel.getBoundingClientRect().left;
+                let shiftY = e.clientY - panel.getBoundingClientRect().top;
+                
+                function moveAt(pageX, pageY) {
+                    panel.style.left = pageX - shiftX + 'px';
+                    panel.style.top = pageY - shiftY + 'px';
                 }
                 
-                // In a real app, this would send an actual email
-                // For demo, we'll show a message
-                alert(`דוח ניהול נשלח ל-${email}`);
+                function onMouseMove(e) {
+                    moveAt(e.pageX, e.pageY);
+                }
+                
+                document.addEventListener('mousemove', onMouseMove);
+                
+                panel.onmouseup = function() {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    panel.onmouseup = null;
+                    panel.classList.remove('active');
+                };
+                
+                panel.style.position = 'absolute';
+                panel.style.zIndex = 1000;
+                moveAt(e.pageX, e.pageY);
             });
+            
+            panel.ondragstart = function() {
+                return false;
+            };
+        }
+        
+        function updateUserUI() {
+            if (currentUser) {
+                const userElements = document.querySelectorAll('#user-menu span, .mobile-user-name');
+                userElements.forEach(el => {
+                    el.textContent = currentUser.name;
+                });
+                
+                const userImages = document.querySelectorAll('#user-menu img, .mobile-user-img');
+                userImages.forEach(img => {
+                    img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=random`;
+                });
+                
+                // Show projects section
+                noProjects.classList.add('hidden');
+            }
+        }
+        
+        function showSuccess(message) {
+            document.getElementById('success-message').textContent = message;
+            successNotification.classList.remove('hidden');
+            
+            setTimeout(() => {
+                successNotification.classList.add('hidden');
+            }, 3000);
+        }
+        
+        function showError(message) {
+            document.getElementById('error-message').textContent = message;
+            errorNotification.classList.remove('hidden');
+            
+            setTimeout(() => {
+                errorNotification.classList.add('hidden');
+            }, 3000);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Make first art style button active
+            artStyleBtns[2].classList.add('active', 'bg-indigo-100', 'border-indigo-300');
+            
+            // For demo purposes - expose admin function to console
+            window.showAdminPanel = showAdminPanel;
+            console.log('לצפייה בלוח הניהול, הקלד showAdminPanel() בקונסולה');
         });
     </script>
 </body>
